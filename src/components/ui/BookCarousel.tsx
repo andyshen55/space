@@ -1,135 +1,130 @@
 "use client";
 
-import { useRef } from "react";
+import { useKeenSlider, KeenSliderPlugin } from "keen-slider/react";
 import Image from "next/image";
 import { Book } from "@/data/books";
-import { cn } from "@/lib/utils";
+import "keen-slider/keen-slider.min.css";
 
 interface BookCarouselProps {
   books: Book[];
-  className?: string;
 }
 
-export function BookCarousel({ books, className }: BookCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+// WheelControls plugin - converts mouse wheel events to drag events for horizontal scrolling
+const WheelControls: KeenSliderPlugin = (slider) => {
+  let touchTimeout: ReturnType<typeof setTimeout>;
+  let position: { x: number; y: number };
+  let wheelActive: boolean;
 
-  const scroll = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const scrollAmount = 320;
-      scrollRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
+  function dispatch(e: WheelEvent, name: string) {
+    position.x -= e.deltaX;
+    position.y -= e.deltaY;
+    slider.container.dispatchEvent(
+      new CustomEvent(name, {
+        detail: { x: position.x, y: position.y },
+      })
+    );
+  }
+
+  function wheelStart(e: WheelEvent) {
+    position = { x: e.pageX, y: e.pageY };
+    dispatch(e, "ksDragStart");
+  }
+
+  function wheel(e: WheelEvent) {
+    dispatch(e, "ksDrag");
+  }
+
+  function wheelEnd(e: WheelEvent) {
+    dispatch(e, "ksDragEnd");
+  }
+
+  function eventWheel(e: WheelEvent) {
+    e.preventDefault();
+    if (!wheelActive) {
+      wheelStart(e);
+      wheelActive = true;
     }
-  };
+    wheel(e);
+    clearTimeout(touchTimeout);
+    touchTimeout = setTimeout(() => {
+      wheelActive = false;
+      wheelEnd(e);
+    }, 50);
+  }
+
+  slider.on("created", () => {
+    slider.container.addEventListener("wheel", eventWheel, {
+      passive: false,
+    });
+  });
+};
+
+export function BookCarousel({ books }: BookCarouselProps) {
+  const [sliderRef] = useKeenSlider<HTMLDivElement>(
+    {
+      loop: true,
+      mode: "free-snap",
+      slides: {
+        perView: 8,
+        spacing: 15,
+      },
+      breakpoints: {
+        "(max-width: 1200px)": {
+          slides: { perView: 4, spacing: 12 },
+        },
+        "(max-width: 600px)": {
+          slides: { perView: 3, spacing: 10 },
+        },
+      },
+    },
+    [WheelControls]
+  );
 
   return (
-    <div className={cn("relative", className)}>
-      <div
-        ref={scrollRef}
-        className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
-        role="region"
-        aria-label="Book carousel"
-        tabIndex={0}
-      >
+    <div className="relative">
+      <div ref={sliderRef} className="keen-slider pb-16">
         {books.map((book) => (
-          <article
-            key={book.id}
-            className="flex-none w-64 snap-start group"
-          >
-            {book.link ? (
-              <a
-                href={book.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block focus:outline-none focus:ring-2 focus:ring-accent rounded-lg"
-              >
-                <BookCard book={book} />
-              </a>
-            ) : (
-              <BookCard book={book} />
-            )}
-          </article>
+          <BookSlide key={book.id} book={book} />
         ))}
       </div>
-
-      {/* Navigation buttons */}
-      <button
-        onClick={() => scroll("left")}
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background/80 backdrop-blur border border-border rounded-full p-2 hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
-        aria-label="Scroll left"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-          className="h-5 w-5"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15.75 19.5L8.25 12l7.5-7.5"
-          />
-        </svg>
-      </button>
-
-      <button
-        onClick={() => scroll("right")}
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background/80 backdrop-blur border border-border rounded-full p-2 hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
-        aria-label="Scroll right"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-          className="h-5 w-5"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.25 4.5l7.5 7.5-7.5 7.5"
-          />
-        </svg>
-      </button>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
+      <Shelf />
     </div>
   );
 }
 
-function BookCard({ book }: { book: Book }) {
+function BookSlide({ book }: { book: Book }) {
   return (
-    <div className="space-y-3">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted">
+    <div className="keen-slider__slide flex items-end justify-center h-[300px]">
+      <div className="relative group cursor-pointer">
         <Image
           src={book.coverImage}
-          alt={`Cover of ${book.title}`}
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          sizes="(max-width: 768px) 256px, 256px"
+          alt={book.title}
+          width={150}
+          height={225}
+          className="w-auto h-auto max-h-[280px] object-contain
+            transition-opacity duration-200 group-hover:opacity-50
+            select-none"
+          draggable={false}
+          sizes="(max-width: 600px) 120px, (max-width: 1200px) 150px, 180px"
         />
       </div>
-      <div>
-        <h3 className="font-semibold text-sm line-clamp-2">{book.title}</h3>
-        <p className="text-sm text-muted-foreground">{book.author}</p>
-        {book.description && (
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-            {book.description}
-          </p>
-        )}
-      </div>
+    </div>
+  );
+}
+
+function Shelf() {
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 w-full h-16 shadow-2xl"
+      aria-hidden="true"
+    >
+      <Image
+        src="/books/shelf_full.jpeg"
+        alt=""
+        fill
+        className="object-cover"
+        sizes="100vw"
+      />
     </div>
   );
 }
