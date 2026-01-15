@@ -13,6 +13,7 @@ interface BookDetailModalProps {
 
 export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isAnimatingFlip, setIsAnimatingFlip] = useState(false);
   const [rotationX, setRotationX] = useState(0);
   const [rotationY, setRotationY] = useState(0);
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -21,13 +22,20 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
 
   const bookWidth = isMobile ? 280 : 320;
   const bookHeight = isMobile ? 420 : 480;
+  const bookDepth = 40;
   const duration = isMobile ? 0.4 : 0.6;
 
-  // Handle click to flip (also reset rotation)
+  // Handle click to flip with animation state
   const handleBookClick = () => {
+    setIsAnimatingFlip(true);
     setIsFlipped(!isFlipped);
     setRotationX(0);
     setRotationY(0);
+
+    // Re-enable mouse tracking after flip animation
+    setTimeout(() => {
+      setIsAnimatingFlip(false);
+    }, duration * 1000);
   };
 
   // Track pointer movement for swipe detection
@@ -39,13 +47,20 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
     const swipeDistance = e.clientX - pointerStartX.current;
     // Flip on swipe if distance > 50px
     if (Math.abs(swipeDistance) > 50) {
+      setIsAnimatingFlip(true);
       setIsFlipped(!isFlipped);
+      setRotationX(0);
+      setRotationY(0);
+
+      setTimeout(() => {
+        setIsAnimatingFlip(false);
+      }, duration * 1000);
     }
   };
 
-  // Mouse tracking for 3D rotation effect (only when book is not flipped)
+  // Mouse tracking for 3D rotation effect (works even when flipped)
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!bookContainerRef.current || isFlipped || isMobile) return;
+    if (!bookContainerRef.current || isAnimatingFlip || isMobile) return;
 
     const rect = bookContainerRef.current.getBoundingClientRect();
 
@@ -57,18 +72,19 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
     const normalizedX = (x - 0.5) * 2;
     const normalizedY = (y - 0.5) * 2;
 
-    // Calculate rotation angles (max 15 degrees)
+    // Calculate rotation angles (expanded from 15 to 45 degrees)
     // X position rotates around Y axis (rotateY)
     // Y position rotates around X axis (rotateX)
-    const maxRotation = 15;
-    const newRotationY = normalizedX * maxRotation;
-    const newRotationX = -normalizedY * maxRotation;
+    const maxRotationY = 45;
+    const maxRotationX = 30;
+    const newRotationY = normalizedX * maxRotationY;
+    const newRotationX = -normalizedY * maxRotationX;
 
     setRotationX(newRotationX);
     setRotationY(newRotationY);
   };
 
-  // Reset rotation when mouse leaves or book is flipped
+  // Reset rotation when mouse leaves
   const handleMouseLeave = () => {
     setRotationX(0);
     setRotationY(0);
@@ -113,14 +129,19 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
                 height: bookHeight,
                 transformStyle: "preserve-3d",
                 position: "relative",
+                willChange: "transform",
               }}
               animate={{
-                rotateY: isFlipped ? -180 : rotationY,
-                rotateX: isFlipped ? 0 : rotationX,
+                rotateY: isFlipped ? -180 + rotationY : rotationY,
+                rotateX: rotationX,
               }}
               transition={{
-                rotateY: isFlipped ? { duration, ease: "easeInOut" } : { type: "spring", stiffness: 300, damping: 30, duration: 0 },
-                rotateX: isFlipped ? { duration: 0.3 } : { type: "spring", stiffness: 300, damping: 30, duration: 0 },
+                rotateY: isAnimatingFlip
+                  ? { duration, ease: "easeInOut" }
+                  : { type: "spring", stiffness: 300, damping: 30 },
+                rotateX: isAnimatingFlip
+                  ? { duration: duration * 0.5, ease: "easeInOut" }
+                  : { type: "spring", stiffness: 300, damping: 30 },
               }}
               onClick={handleBookClick}
               onPointerDown={handlePointerDown}
@@ -128,21 +149,22 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
               whileTap={{ scale: 0.98 }}
               className="cursor-pointer"
             >
-              {/* Front Face - Book Cover */}
+              {/* Front Cover */}
               <div
                 style={{
-                  backfaceVisibility: "hidden",
                   position: "absolute",
-                  width: "100%",
-                  height: "100%",
+                  width: bookWidth,
+                  height: bookHeight,
+                  left: "50%",
+                  top: "50%",
+                  backfaceVisibility: "hidden",
+                  transform: `translate(-50%, -50%) translateZ(${bookDepth / 2}px)`,
                 }}
               >
-                {/* Book Cover Container with 3D Effect */}
                 <div
-                  className="relative w-full h-full"
+                  className="relative w-full h-full overflow-hidden"
                   style={{
                     transformStyle: "preserve-3d",
-                    transform: "rotateY(-5deg) rotateX(2deg)",
                     boxShadow: `
                       0 8px 16px rgba(0,0,0,0.2),
                       0 16px 32px rgba(0,0,0,0.15),
@@ -151,43 +173,33 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
                     `,
                   }}
                 >
-                  {/* Book Cover Image */}
                   <Image
                     src={book.coverImage}
                     alt={book.title}
                     width={bookWidth}
                     height={bookHeight}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="w-full h-full object-cover"
                     priority
                   />
-
-                  {/* Book Spine - Right Edge */}
-                  <div
-                    className="absolute right-0 top-0 bottom-0 w-2 bg-gradient-to-l from-black/40 to-transparent"
-                    style={{
-                      transform: "rotateY(90deg)",
-                      transformOrigin: "right",
-                      boxShadow: "-2px 0 4px rgba(0,0,0,0.3)",
-                    }}
-                  />
-
                   {/* Subtle Light Reflection */}
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-b from-white/10 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent pointer-events-none" />
                 </div>
               </div>
 
-              {/* Back Face - Notes */}
+              {/* Back Cover */}
               <div
                 style={{
-                  backfaceVisibility: "hidden",
                   position: "absolute",
-                  width: "100%",
-                  height: "100%",
-                  transform: "rotateY(180deg)",
+                  width: bookWidth,
+                  height: bookHeight,
+                  left: "50%",
+                  top: "50%",
+                  backfaceVisibility: "hidden",
+                  transform: `translate(-50%, -50%) rotateY(180deg) translateZ(${bookDepth / 2}px)`,
                 }}
               >
                 <div
-                  className="w-full h-full rounded-lg overflow-hidden flex flex-col p-6 md:p-8"
+                  className="w-full h-full overflow-hidden flex flex-col p-6 md:p-8"
                   style={{
                     background: "linear-gradient(135deg, #f5f5f0 0%, #e8e8e0 100%)",
                     boxShadow: `
@@ -224,6 +236,81 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Left Spine */}
+              <div
+                style={{
+                  position: "absolute",
+                  width: bookDepth,
+                  height: bookHeight,
+                  left: "50%",
+                  top: "50%",
+                  backfaceVisibility: "hidden",
+                  pointerEvents: "none",
+                  transform: `translate(-50%, -50%) rotateY(-90deg) translateZ(${bookWidth / 2}px)`,
+                  background: "linear-gradient(180deg, hsl(30 20% 35%) 0%, hsl(30 25% 30%) 50%, hsl(30 20% 25%) 100%)",
+                  boxShadow: `
+                    inset 2px 0 4px rgba(0,0,0,0.3),
+                    inset -2px 0 4px rgba(0,0,0,0.2)
+                  `,
+                }}
+              />
+
+              {/* Right Spine */}
+              {!isMobile && (
+                <div
+                  style={{
+                    position: "absolute",
+                    width: bookDepth,
+                    height: bookHeight,
+                    left: "50%",
+                    top: "50%",
+                    backfaceVisibility: "hidden",
+                    pointerEvents: "none",
+                    transform: `translate(-50%, -50%) rotateY(90deg) translateZ(${bookWidth / 2}px)`,
+                    background: `repeating-linear-gradient(
+                      90deg,
+                      #fafaf8,
+                      #fafaf8 1px,
+                      #f5f5f0 1px,
+                      #f5f5f0 2px
+                    )`,
+                    boxShadow: "inset 0 0 4px rgba(0,0,0,0.15)",
+                  }}
+                />
+              )}
+
+              {/* Top Edge */}
+              <div
+                style={{
+                  position: "absolute",
+                  width: bookWidth,
+                  height: bookDepth,
+                  left: "50%",
+                  top: "50%",
+                  backfaceVisibility: "hidden",
+                  pointerEvents: "none",
+                  transform: `translate(-50%, -50%) rotateX(90deg) translateZ(${bookHeight / 2}px)`,
+                  background: "linear-gradient(90deg, #f8f8f0 0%, #ffffff 50%, #f8f8f0 100%)",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                }}
+              />
+
+              {/* Bottom Edge */}
+              <div
+                style={{
+                  position: "absolute",
+                  width: bookWidth,
+                  height: bookDepth,
+                  left: "50%",
+                  top: "50%",
+                  backfaceVisibility: "hidden",
+                  pointerEvents: "none",
+                  transform: `translate(-50%, -50%) rotateX(-90deg) translateZ(${bookHeight / 2}px)`,
+                  background: "linear-gradient(90deg, #f8f8f0 0%, #ffffff 50%, #f8f8f0 100%)",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                }}
+              />
             </motion.div>
           </div>
 
