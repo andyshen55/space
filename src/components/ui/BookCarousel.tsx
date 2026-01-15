@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useKeenSlider, KeenSliderPlugin } from "keen-slider/react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import { Book } from "@/data/books";
+import { BookDetailModal } from "./BookDetailModal";
 import "keen-slider/keen-slider.min.css";
 
 interface BookCarouselProps {
@@ -60,6 +63,7 @@ const WheelControls: KeenSliderPlugin = (slider) => {
 };
 
 export function BookCarousel({ books }: BookCarouselProps) {
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [sliderRef] = useKeenSlider<HTMLDivElement>(
     {
       loop: true,
@@ -81,21 +85,47 @@ export function BookCarousel({ books }: BookCarouselProps) {
   );
 
   return (
-    <div className="relative">
-      <div ref={sliderRef} className="keen-slider pb-16">
-        {books.map((book) => (
-          <BookSlide key={book.id} book={book} />
-        ))}
+    <>
+      <div className="relative">
+        <div ref={sliderRef} className="keen-slider pb-16">
+          {books.map((book) => (
+            <BookSlide
+              key={book.id}
+              book={book}
+              onClick={() => setSelectedBook(book)}
+            />
+          ))}
+        </div>
+        <Shelf />
       </div>
-      <Shelf />
-    </div>
+
+      {/* Book Detail Modal */}
+      {selectedBook && (
+        <BookDetailModal
+          book={selectedBook}
+          onClose={() => setSelectedBook(null)}
+        />
+      )}
+    </>
   );
 }
 
-function BookSlide({ book }: { book: Book }) {
+function BookSlide({
+  book,
+  onClick,
+}: {
+  book: Book;
+  onClick?: () => void;
+}) {
   return (
     <div className="keen-slider__slide flex items-end justify-center h-[300px]">
-      <div className="relative group cursor-pointer">
+      <motion.button
+        onClick={onClick}
+        className="relative group cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent rounded"
+        whileHover={{ y: -8 }}
+        whileTap={{ scale: 0.95 }}
+        layoutId={`book-${book.id}`}
+      >
         <Image
           src={book.coverImage}
           alt={book.title}
@@ -107,7 +137,7 @@ function BookSlide({ book }: { book: Book }) {
           draggable={false}
           sizes="(max-width: 600px) 120px, (max-width: 1200px) 150px, 180px"
         />
-      </div>
+      </motion.button>
     </div>
   );
 }
