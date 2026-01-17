@@ -1,15 +1,17 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 export function DarkModeToggle() {
-  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Use useSyncExternalStore to track client-side mounting state
+  const mounted = useSyncExternalStore(
+    () => () => {}, // No-op subscribe since this never changes
+    () => true, // Client-side: always return true
+    () => false // Server-side: always return false
+  );
 
   if (!mounted) {
     return (

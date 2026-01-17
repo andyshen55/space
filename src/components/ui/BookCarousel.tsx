@@ -64,6 +64,7 @@ const WheelControls: KeenSliderPlugin = (slider) => {
 
 export function BookCarousel({ books }: BookCarouselProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [pendingBook, setPendingBook] = useState<Book | null>(null);
   const [sliderRef] = useKeenSlider<HTMLDivElement>(
     {
       loop: true,
@@ -84,6 +85,32 @@ export function BookCarousel({ books }: BookCarouselProps) {
     [WheelControls]
   );
 
+  // Handle book selection with image preloading
+  const handleBookClick = (book: Book) => {
+    setPendingBook(book);
+    let hasOpened = false;
+
+    // Preload the image before opening modal
+    const img = new window.Image();
+    img.src = book.coverImage;
+    img.onload = () => {
+      if (!hasOpened) {
+        hasOpened = true;
+        setSelectedBook(book);
+        setPendingBook(null);
+      }
+    };
+
+    // Fallback: open after 300ms even if image hasn't loaded
+    setTimeout(() => {
+      if (!hasOpened) {
+        hasOpened = true;
+        setSelectedBook(book);
+        setPendingBook(null);
+      }
+    }, 300);
+  };
+
   return (
     <>
       <div className="relative">
@@ -92,7 +119,8 @@ export function BookCarousel({ books }: BookCarouselProps) {
             <BookSlide
               key={book.id}
               book={book}
-              onClick={() => setSelectedBook(book)}
+              onClick={() => handleBookClick(book)}
+              isPending={pendingBook?.id === book.id}
             />
           ))}
         </div>
@@ -113,9 +141,11 @@ export function BookCarousel({ books }: BookCarouselProps) {
 function BookSlide({
   book,
   onClick,
+  isPending = false,
 }: {
   book: Book;
   onClick?: () => void;
+  isPending?: boolean;
 }) {
   return (
     <div className="keen-slider__slide flex items-end justify-center h-[300px]">
@@ -124,7 +154,7 @@ function BookSlide({
         className="relative group cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent rounded"
         whileHover={{ y: -8 }}
         whileTap={{ scale: 0.95 }}
-        layoutId={`book-${book.id}`}
+        style={{ opacity: isPending ? 0.6 : 1 }}
       >
         <Image
           src={book.coverImage}
@@ -132,10 +162,13 @@ function BookSlide({
           width={150}
           height={225}
           className="w-auto h-auto max-h-[280px] object-contain
-            transition-opacity duration-200 group-hover:opacity-50
             select-none"
           draggable={false}
           sizes="(max-width: 600px) 120px, (max-width: 1200px) 150px, 180px"
+          priority={parseInt(book.id) <= 8}
+          loading="eager"
+          placeholder="empty"
+          quality={100}
         />
       </motion.button>
     </div>

@@ -18,6 +18,8 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
   const [rotationY, setRotationY] = useState(0);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const pointerStartX = useRef(0);
+  const pointerStartY = useRef(0);
+  const isDragging = useRef(false);
   const bookContainerRef = useRef<HTMLDivElement>(null);
 
   const bookWidth = isMobile ? 280 : 320;
@@ -38,13 +40,41 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
     }, duration * 1000);
   };
 
-  // Track pointer movement for swipe detection
+  // Track pointer movement for swipe detection and mobile rotation
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerStartX.current = e.clientX;
+    pointerStartY.current = e.clientY;
+    isDragging.current = true;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isMobile || !isDragging.current || isAnimatingFlip) return;
+    if (!bookContainerRef.current) return;
+
+    const rect = bookContainerRef.current.getBoundingClientRect();
+
+    // Calculate position relative to book center
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    // Normalize to -1 to 1 range centered at 0
+    const normalizedX = (x - 0.5) * 2;
+    const normalizedY = (y - 0.5) * 2;
+
+    // Calculate rotation angles (reduced for mobile)
+    const maxRotationY = 30;
+    const maxRotationX = 20;
+    const newRotationY = normalizedX * maxRotationY;
+    const newRotationX = -normalizedY * maxRotationX;
+
+    setRotationX(newRotationX);
+    setRotationY(newRotationY);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    isDragging.current = false;
     const swipeDistance = e.clientX - pointerStartX.current;
+
     // Flip on swipe if distance > 50px
     if (Math.abs(swipeDistance) > 50) {
       setIsAnimatingFlip(true);
@@ -55,6 +85,10 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
       setTimeout(() => {
         setIsAnimatingFlip(false);
       }, duration * 1000);
+    } else {
+      // Reset rotation when not swiping
+      setRotationX(0);
+      setRotationY(0);
     }
   };
 
@@ -100,12 +134,11 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
         onClick={onClose}
         className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       >
-        {/* Book Container - No opacity change, only scale */}
+        {/* Book Container */}
         <motion.div
-          layoutId={`book-${book.id}`}
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          exit={{ scale: 0.8 }}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.8, opacity: 0 }}
           transition={{
             type: "spring",
             stiffness: 300,
@@ -145,6 +178,7 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
               }}
               onClick={handleBookClick}
               onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               whileTap={{ scale: 0.98 }}
               className="cursor-pointer"
@@ -180,6 +214,9 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
                     height={bookHeight}
                     className="w-full h-full object-cover"
                     priority
+                    loading="eager"
+                    placeholder="empty"
+                    quality={100}
                   />
                   {/* Subtle Light Reflection */}
                   <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent pointer-events-none" />
