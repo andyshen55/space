@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useKeenSlider, KeenSliderPlugin } from "keen-slider/react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import { Book } from "@/data/books";
 import { BookDetailModal } from "./BookDetailModal";
@@ -100,12 +100,15 @@ export function BookCarousel({ books }: BookCarouselProps) {
       </div>
 
       {/* Book Detail Modal */}
-      {selectedBook && (
-        <BookDetailModal
-          book={selectedBook}
-          onClose={() => setSelectedBook(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedBook && (
+          <BookDetailModal
+            key={selectedBook.id}
+            book={selectedBook}
+            onClose={() => setSelectedBook(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -121,22 +124,62 @@ function BookSlide({
     <div className="keen-slider__slide flex items-end justify-center h-[300px]">
       <motion.button
         onClick={onClick}
-        className="relative group cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent rounded"
-        whileHover={{ y: -8 }}
+        initial="rest"
+        animate="rest"
+        whileHover="hover"
         whileTap={{ scale: 0.95 }}
         layoutId={`book-${book.id}`}
+        style={{ perspective: 700 }}
+        className="relative cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-accent"
       >
-        <Image
-          src={book.coverImage}
-          alt={book.title}
-          width={150}
-          height={225}
-          className="w-auto h-auto max-h-[280px] object-contain
-            transition-opacity duration-200 group-hover:opacity-50
-            select-none"
-          draggable={false}
-          sizes="(max-width: 600px) 120px, (max-width: 1200px) 150px, 180px"
-        />
+        {/* Page block revealed as the cover opens */}
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(90deg, #efe9da 0%, #fbf9f3 14%, #fdfcf8 100%)",
+            boxShadow: "inset 7px 0 9px -6px rgba(0,0,0,0.45)",
+          }}
+        >
+          {/* Page-edge lines on the fore-edge */}
+          <div
+            className="absolute inset-y-[3px] right-0 w-[3px]"
+            style={{
+              background:
+                "repeating-linear-gradient(180deg,#e7e1cf,#e7e1cf 1px,#cfc8b3 1px,#cfc8b3 2px)",
+            }}
+          />
+        </div>
+
+        {/* Front cover, hinged on the left spine — swings open slightly on hover */}
+        <motion.div
+          variants={{ rest: { rotateY: 0 }, hover: { rotateY: -32 } }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          style={{
+            position: "relative",
+            transformOrigin: "left center",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <Image
+            src={book.coverImage}
+            alt={book.title}
+            width={150}
+            height={225}
+            className="w-auto h-auto max-h-[280px] object-contain select-none"
+            draggable={false}
+            sizes="(max-width: 600px) 120px, (max-width: 1200px) 150px, 180px"
+          />
+          {/* Shading on the inner cover as it lifts off the page */}
+          <motion.div
+            className="pointer-events-none absolute inset-0"
+            variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(0,0,0,0.28) 0%, transparent 40%)",
+            }}
+          />
+        </motion.div>
       </motion.button>
     </div>
   );

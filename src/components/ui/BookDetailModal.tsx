@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import { Book } from "@/data/books";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -12,329 +12,315 @@ interface BookDetailModalProps {
 }
 
 export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isAnimatingFlip, setIsAnimatingFlip] = useState(false);
-  const [rotationX, setRotationX] = useState(0);
-  const [rotationY, setRotationY] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [tiltX, setTiltX] = useState(0);
+  const [tiltY, setTiltY] = useState(0);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const pointerStartX = useRef(0);
-  const bookContainerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
 
-  const bookWidth = isMobile ? 280 : 320;
-  const bookHeight = isMobile ? 420 : 480;
-  const bookDepth = 40;
-  const duration = isMobile ? 0.4 : 0.6;
+  // Modal mounts client-side on click, so window is always available here
+  const [vw] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+  const [vh] = useState(() =>
+    typeof window !== "undefined" ? window.innerHeight : 768
+  );
 
-  // Handle click to flip with animation state
-  const handleBookClick = () => {
-    setIsAnimatingFlip(true);
-    setIsFlipped(!isFlipped);
-    setRotationX(0);
-    setRotationY(0);
+  // Mobile: one big page sized to the viewport. Desktop: fixed two-page spread.
+  const pageWidth = isMobile ? Math.min(340, vw - 40) : 300;
+  const pageHeight = isMobile
+    ? Math.min(Math.round(pageWidth * 1.5), vh - 170)
+    : 450;
+  // Desktop slides the spread right to stay centered; mobile keeps the single page centered.
+  const openShiftX = isMobile ? 0 : pageWidth / 2;
+  const duration = isMobile ? 0.6 : 0.75;
 
-    // Re-enable mouse tracking after flip animation
-    setTimeout(() => {
-      setIsAnimatingFlip(false);
-    }, duration * 1000);
-  };
+  // Open the book into a two-page spread once it has flown in from the shelf
+  useEffect(() => {
+    const t = setTimeout(() => setIsOpen(true), 280);
+    return () => clearTimeout(t);
+  }, []);
 
-  // Track pointer movement for swipe detection
-  const handlePointerDown = (e: React.PointerEvent) => {
-    pointerStartX.current = e.clientX;
-  };
+  // Close the cover, then unmount so the book flies back to the shelf
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setIsOpen(false);
+    setTiltX(0);
+    setTiltY(0);
+    setTimeout(onClose, duration * 1000 + 40);
+  }, [isClosing, onClose, duration]);
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    const swipeDistance = e.clientX - pointerStartX.current;
-    // Flip on swipe if distance > 50px
-    if (Math.abs(swipeDistance) > 50) {
-      setIsAnimatingFlip(true);
-      setIsFlipped(!isFlipped);
-      setRotationX(0);
-      setRotationY(0);
+  // Dismiss on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleClose]);
 
-      setTimeout(() => {
-        setIsAnimatingFlip(false);
-      }, duration * 1000);
-    }
-  };
-
-  // Mouse tracking for 3D rotation effect (works even when flipped)
+  // Subtle mouse-tracked tilt while the spread is open (desktop only)
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!bookContainerRef.current || isAnimatingFlip || isMobile) return;
-
-    const rect = bookContainerRef.current.getBoundingClientRect();
-
-    // Calculate position relative to book center (0-1 range, centered at 0.5)
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-
-    // Normalize to -1 to 1 range centered at 0
-    const normalizedX = (x - 0.5) * 2;
-    const normalizedY = (y - 0.5) * 2;
-
-    // Calculate rotation angles (expanded from 15 to 45 degrees)
-    // X position rotates around Y axis (rotateY)
-    // Y position rotates around X axis (rotateX)
-    const maxRotationY = 45;
-    const maxRotationX = 30;
-    const newRotationY = normalizedX * maxRotationY;
-    const newRotationX = -normalizedY * maxRotationX;
-
-    setRotationX(newRotationX);
-    setRotationY(newRotationY);
+    if (!sceneRef.current || !isOpen || isClosing || isMobile) return;
+    const rect = sceneRef.current.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width - 0.5;
+    const ny = (e.clientY - rect.top) / rect.height - 0.5;
+    setTiltY(nx * 12);
+    setTiltX(-ny * 8);
   };
 
-  // Reset rotation when mouse leaves
   const handleMouseLeave = () => {
-    setRotationX(0);
-    setRotationY(0);
+    setTiltX(0);
+    setTiltY(0);
+  };
+
+  const pageFace: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
+    overflow: "hidden",
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      onClick={handleClose}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 p-4"
+    >
+      {/* Perspective stage for the 3D book */}
+      <div
+        style={{ perspective: isMobile ? "1400px" : "2200px" }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Book Container - No opacity change, only scale */}
+        {/* layoutId element flies between the shelf and the modal (cover-sized) */}
         <motion.div
           layoutId={`book-${book.id}`}
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          exit={{ scale: 0.8 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 30,
-            duration,
+          style={{
+            width: pageWidth,
+            height: pageHeight,
+            position: "relative",
           }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative"
         >
-          {/* 3D Perspective Container - responds to mouse movement */}
-          <div
-            ref={bookContainerRef}
+          {/* Scene: holds the right page + opening cover leaf, shifts to re-center the spread */}
+          <motion.div
+            ref={sceneRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            style={{ perspective: "1200px" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              transformStyle: "preserve-3d",
+            }}
+            animate={{
+              x: isOpen ? openShiftX : 0,
+              rotateX: tiltX,
+              rotateY: tiltY,
+            }}
+            transition={{
+              x: { duration, ease: [0.33, 0, 0.2, 1] },
+              rotateX: { type: "spring", stiffness: 120, damping: 16 },
+              rotateY: { type: "spring", stiffness: 120, damping: 16 },
+            }}
           >
-            {/* 3D Book Wrapper - flips on click, rotates with mouse */}
+            {/* RIGHT PAGE — revealed underneath the cover (right half of the spread) */}
+            <div
+              style={{
+                position: "absolute",
+                width: pageWidth,
+                height: pageHeight,
+                left: 0,
+                top: 0,
+                transformStyle: "preserve-3d",
+                background:
+                  "linear-gradient(180deg, #fdfcf7 0%, #f6f3e9 100%)",
+                boxShadow:
+                  "0 18px 40px rgba(0,0,0,0.35), 0 6px 14px rgba(0,0,0,0.2)",
+              }}
+            >
+              <PageContent variant={isMobile ? "single" : "right"} book={book} />
+              {/* Gutter shadow near the spine (left edge) */}
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 w-12"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.06) 45%, transparent 100%)",
+                }}
+              />
+              {/* Stacked-pages edge on the right */}
+              <div
+                className="pointer-events-none absolute inset-y-1 -right-[3px] w-[3px]"
+                style={{
+                  background:
+                    "repeating-linear-gradient(180deg,#e9e4d4,#e9e4d4 1px,#cfc9b6 1px,#cfc9b6 2px)",
+                }}
+              />
+            </div>
+
+            {/* LEFT LEAF — the cover that opens (front = cover art, back = left page) */}
             <motion.div
               style={{
-                width: bookWidth,
-                height: bookHeight,
+                position: "absolute",
+                width: pageWidth,
+                height: pageHeight,
+                left: 0,
+                top: 0,
                 transformStyle: "preserve-3d",
-                position: "relative",
-                willChange: "transform",
+                transformOrigin: "left center",
               }}
-              animate={{
-                rotateY: isFlipped ? -180 + rotationY : rotationY,
-                rotateX: rotationX,
-              }}
-              transition={{
-                rotateY: isAnimatingFlip
-                  ? { duration, ease: "easeInOut" }
-                  : { type: "spring", stiffness: 300, damping: 30 },
-                rotateX: isAnimatingFlip
-                  ? { duration: duration * 0.5, ease: "easeInOut" }
-                  : { type: "spring", stiffness: 300, damping: 30 },
-              }}
-              onClick={handleBookClick}
-              onPointerDown={handlePointerDown}
-              onPointerUp={handlePointerUp}
-              whileTap={{ scale: 0.98 }}
-              className="cursor-pointer"
+              animate={{ rotateY: isOpen ? -180 : 0 }}
+              transition={{ duration, ease: [0.45, 0.05, 0.2, 1] }}
             >
-              {/* Front Cover */}
-              <div
-                style={{
-                  position: "absolute",
-                  width: bookWidth,
-                  height: bookHeight,
-                  left: "50%",
-                  top: "50%",
-                  backfaceVisibility: "hidden",
-                  transform: `translate(-50%, -50%) translateZ(${bookDepth / 2}px)`,
-                }}
-              >
+              {/* FRONT FACE — book cover (visible when closed) */}
+              <div style={{ ...pageFace, transform: "translateZ(1px)" }}>
+                <Image
+                  src={book.coverImage}
+                  alt={book.title}
+                  width={pageWidth}
+                  height={pageHeight}
+                  className="h-full w-full object-cover"
+                  priority
+                  draggable={false}
+                />
+                {/* Spine binding hint on the left edge */}
                 <div
-                  className="relative w-full h-full overflow-hidden"
+                  className="pointer-events-none absolute inset-y-0 left-0 w-3"
                   style={{
-                    transformStyle: "preserve-3d",
-                    boxShadow: `
-                      0 8px 16px rgba(0,0,0,0.2),
-                      0 16px 32px rgba(0,0,0,0.15),
-                      0 24px 48px rgba(0,0,0,0.1),
-                      inset -2px 0 8px rgba(0,0,0,0.1)
-                    `,
-                  }}
-                >
-                  <Image
-                    src={book.coverImage}
-                    alt={book.title}
-                    width={bookWidth}
-                    height={bookHeight}
-                    className="w-full h-full object-cover"
-                    priority
-                  />
-                  {/* Subtle Light Reflection */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Back Cover */}
-              <div
-                style={{
-                  position: "absolute",
-                  width: bookWidth,
-                  height: bookHeight,
-                  left: "50%",
-                  top: "50%",
-                  backfaceVisibility: "hidden",
-                  transform: `translate(-50%, -50%) rotateY(180deg) translateZ(${bookDepth / 2}px)`,
-                }}
-              >
-                <div
-                  className="w-full h-full overflow-hidden flex flex-col p-6 md:p-8"
-                  style={{
-                    background: "linear-gradient(135deg, #f5f5f0 0%, #e8e8e0 100%)",
-                    boxShadow: `
-                      0 8px 16px rgba(0,0,0,0.2),
-                      0 16px 32px rgba(0,0,0,0.15),
-                      0 24px 48px rgba(0,0,0,0.1)
-                    `,
-                  }}
-                >
-                  {/* Notes Header */}
-                  <div className="mb-4 pb-4 border-b border-gray-400">
-                    <h3 className="text-xs font-bold text-gray-600 uppercase tracking-widest">
-                      Reading Notes
-                    </h3>
-                  </div>
-
-                  {/* Notes Content */}
-                  <div className="flex-1 overflow-y-auto">
-                    <p
-                      className="text-sm leading-relaxed text-gray-700"
-                      style={{
-                        fontFamily: '"Georgia", serif',
-                      }}
-                    >
-                      {book.notes || "No notes yet."}
-                    </p>
-                  </div>
-
-                  {/* Bottom Indicator */}
-                  <div className="mt-4 pt-4 border-t border-gray-400 text-center">
-                    <p className="text-xs text-gray-500 italic">
-                      Flip back to cover
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Left Spine */}
-              <div
-                style={{
-                  position: "absolute",
-                  width: bookDepth,
-                  height: bookHeight,
-                  left: "50%",
-                  top: "50%",
-                  backfaceVisibility: "hidden",
-                  pointerEvents: "none",
-                  transform: `translate(-50%, -50%) rotateY(-90deg) translateZ(${bookWidth / 2}px)`,
-                  background: "linear-gradient(180deg, hsl(30 20% 35%) 0%, hsl(30 25% 30%) 50%, hsl(30 20% 25%) 100%)",
-                  boxShadow: `
-                    inset 2px 0 4px rgba(0,0,0,0.3),
-                    inset -2px 0 4px rgba(0,0,0,0.2)
-                  `,
-                }}
-              />
-
-              {/* Right Spine */}
-              {!isMobile && (
-                <div
-                  style={{
-                    position: "absolute",
-                    width: bookDepth,
-                    height: bookHeight,
-                    left: "50%",
-                    top: "50%",
-                    backfaceVisibility: "hidden",
-                    pointerEvents: "none",
-                    transform: `translate(-50%, -50%) rotateY(90deg) translateZ(${bookWidth / 2}px)`,
-                    background: `repeating-linear-gradient(
-                      90deg,
-                      #fafaf8,
-                      #fafaf8 1px,
-                      #f5f5f0 1px,
-                      #f5f5f0 2px
-                    )`,
-                    boxShadow: "inset 0 0 4px rgba(0,0,0,0.15)",
+                    background:
+                      "linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.08) 60%, transparent 100%)",
                   }}
                 />
-              )}
+                {/* Glossy highlight */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-black/10" />
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    boxShadow:
+                      "0 18px 40px rgba(0,0,0,0.4), 0 6px 14px rgba(0,0,0,0.25)",
+                  }}
+                />
+              </div>
 
-              {/* Top Edge */}
+              {/* BACK FACE — inside-cover / left page (visible when open) */}
               <div
                 style={{
-                  position: "absolute",
-                  width: bookWidth,
-                  height: bookDepth,
-                  left: "50%",
-                  top: "50%",
-                  backfaceVisibility: "hidden",
-                  pointerEvents: "none",
-                  transform: `translate(-50%, -50%) rotateX(90deg) translateZ(${bookHeight / 2}px)`,
-                  background: "linear-gradient(90deg, #f8f8f0 0%, #ffffff 50%, #f8f8f0 100%)",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  ...pageFace,
+                  transform: "rotateY(180deg) translateZ(1px)",
+                  background:
+                    "linear-gradient(180deg, #fdfcf7 0%, #f6f3e9 100%)",
                 }}
-              />
-
-              {/* Bottom Edge */}
-              <div
-                style={{
-                  position: "absolute",
-                  width: bookWidth,
-                  height: bookDepth,
-                  left: "50%",
-                  top: "50%",
-                  backfaceVisibility: "hidden",
-                  pointerEvents: "none",
-                  transform: `translate(-50%, -50%) rotateX(-90deg) translateZ(${bookHeight / 2}px)`,
-                  background: "linear-gradient(90deg, #f8f8f0 0%, #ffffff 50%, #f8f8f0 100%)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
+              >
+                {/* Desktop: left page shows title + author. Mobile: plain inside cover. */}
+                {!isMobile && <PageContent variant="left" book={book} />}
+                {/* Gutter shadow near the spine (right edge) */}
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 w-12"
+                  style={{
+                    background:
+                      "linear-gradient(270deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.06) 45%, transparent 100%)",
+                  }}
+                />
+              </div>
             </motion.div>
-          </div>
-
-          {/* Interaction Hints */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-            className="mt-6 text-center space-y-2"
-          >
-            <p className="text-xs text-muted-foreground font-medium">
-              {isMobile ? "Tap or swipe to flip" : "Click to flip"}
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onClose}
-              className="mx-auto block px-6 py-2 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-            >
-              Close
-            </motion.button>
           </motion.div>
         </motion.div>
+      </div>
+
+      {/* Hint + close button */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? 16 : 0 }}
+        transition={{ delay: isClosing ? 0 : 0.5, duration: 0.35 }}
+        className="mt-8 flex flex-col items-center gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-xs font-medium text-white/70">
+          {isMobile ? "Tap outside to close" : "Click outside or press Esc to close"}
+        </p>
+        <button
+          onClick={handleClose}
+          className="rounded-lg bg-white/10 px-6 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
+        >
+          Close
+        </button>
       </motion.div>
-    </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// Page content. Desktop spread: "left" = title + author, "right" = description + notes.
+// Mobile: "single" = everything on one scrollable page.
+function PageContent({
+  variant,
+  book,
+}: {
+  variant: "left" | "right" | "single";
+  book: Book;
+}) {
+  // Desktop left page — title + author, centered like a title page
+  if (variant === "left") {
+    return (
+      <div
+        className="flex h-full flex-col items-center justify-center p-8 text-center"
+        style={{ fontFamily: '"Georgia", serif' }}
+      >
+        <h2 className="mb-3 text-2xl font-bold leading-tight text-gray-800">
+          {book.title}
+        </h2>
+        <div className="mb-3 h-px w-10 bg-gray-300" />
+        <p className="text-sm italic text-gray-500">{book.author}</p>
+      </div>
+    );
+  }
+
+  // Desktop right page — description + reading notes
+  if (variant === "right") {
+    return (
+      <div
+        className="flex h-full flex-col p-8"
+        style={{ fontFamily: '"Georgia", serif' }}
+      >
+        <p className="mb-4 text-sm leading-relaxed text-gray-700">
+          {book.description}
+        </p>
+        <div className="mb-3 border-b border-gray-300 pb-2">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">
+            Reading Notes
+          </h3>
+        </div>
+        <p className="flex-1 overflow-y-auto text-sm leading-relaxed text-gray-700">
+          {book.notes || "No notes yet."}
+        </p>
+      </div>
+    );
+  }
+
+  // Mobile single page — everything, scrollable
+  return (
+    <div
+      className="flex h-full flex-col overflow-y-auto p-6"
+      style={{ fontFamily: '"Georgia", serif' }}
+    >
+      <h2 className="mb-1 text-xl font-bold leading-tight text-gray-800">
+        {book.title}
+      </h2>
+      <p className="mb-4 text-sm italic text-gray-500">{book.author}</p>
+      <p className="mb-4 text-sm leading-relaxed text-gray-700">
+        {book.description}
+      </p>
+      <div className="mb-3 border-b border-gray-300 pb-2">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">
+          Reading Notes
+        </h3>
+      </div>
+      <p className="text-sm leading-relaxed text-gray-700">
+        {book.notes || "No notes yet."}
+      </p>
+    </div>
   );
 }
