@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useKeenSlider, KeenSliderPlugin } from "keen-slider/react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
@@ -64,35 +64,79 @@ const WheelControls: KeenSliderPlugin = (slider) => {
 
 export function BookCarousel({ books }: BookCarouselProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [sliderRef] = useKeenSlider<HTMLDivElement>(
+  // Book queued to open once the carousel finishes centering it
+  const pendingOpen = useRef<Book | null>(null);
+
+  const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>(
     {
       loop: true,
       mode: "free-snap",
+      // origin "center" makes the active slide sit in the middle, so moveToIdx
+      // centers a clicked book before it opens.
       slides: {
         perView: 6,
         spacing: 18,
+        origin: "center",
       },
       breakpoints: {
         "(max-width: 1200px)": {
-          slides: { perView: 3, spacing: 16 },
+          slides: { perView: 3, spacing: 16, origin: "center" },
         },
         "(max-width: 600px)": {
-          slides: { perView: 2, spacing: 14 },
+          slides: { perView: 2, spacing: 14, origin: "center" },
         },
+      },
+      // Fires when any slider animation settles — including the centering move
+      // we kick off on click. Open the queued book once it's centered.
+      animationEnded() {
+        if (pendingOpen.current) {
+          const book = pendingOpen.current;
+          pendingOpen.current = null;
+          setSelectedBook(book);
+        }
       },
     },
     [WheelControls]
+  );
+
+  // Center the clicked book, then open it. If it's already centered, open now.
+  const handleBookClick = useCallback(
+    (book: Book, idx: number) => {
+      const slider = instanceRef.current;
+      if (!slider) {
+        setSelectedBook(book);
+        return;
+      }
+      const details = slider.track.details;
+      if (!details || details.rel === idx) {
+        setSelectedBook(book);
+        return;
+      }
+      // Shortest signed distance around the loop, so we scroll the minimal way.
+      const len = books.length;
+      let diff = idx - details.rel;
+      if (diff > len / 2) diff -= len;
+      if (diff < -len / 2) diff += len;
+      pendingOpen.current = book;
+      slider.moveToIdx(details.abs + diff, true, {
+        duration: 450,
+        // ease-in-out cubic: accelerate from rest, decelerate into center
+        easing: (t) =>
+          t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+      });
+    },
+    [instanceRef, books.length]
   );
 
   return (
     <>
       <div className="relative">
         <div ref={sliderRef} className="keen-slider relative z-10 pb-[30px]">
-          {books.map((book) => (
+          {books.map((book, idx) => (
             <BookSlide
               key={book.id}
               book={book}
-              onClick={() => setSelectedBook(book)}
+              onClick={() => handleBookClick(book, idx)}
             />
           ))}
         </div>
@@ -129,6 +173,9 @@ function BookSlide({
         whileHover="hover"
         whileTap={{ scale: 0.95 }}
         layoutId={`book-${book.id}`}
+        // Match the modal: no opacity crossfade so the cover stays fully opaque
+        // as it flies back to the shelf on close.
+        layoutCrossfade={false}
         style={{ perspective: 700 }}
         className="relative isolate block max-w-full cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-accent"
       >

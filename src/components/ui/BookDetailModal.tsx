@@ -106,6 +106,11 @@ export function BookDetailModal({ book, onClose }: BookDetailModalProps) {
             height: pageHeight,
             position: "relative",
           }}
+          // Keep the cover fully opaque during the shared-layout flight. By
+          // default motion crossfades opacity between the shelf element and this
+          // one, which makes the book look semi-transparent while it travels.
+          // Disabling the crossfade keeps the flying cover at full opacity.
+          layoutCrossfade={false}
         >
           {/* Scene: holds the right page + opening cover leaf, shifts to re-center the spread */}
           <motion.div
