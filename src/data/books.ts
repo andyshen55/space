@@ -1,5 +1,6 @@
 export interface Book {
   id: string;
+  slug: string; // URL slug for /books/[slug]
   title: string;
   author: string;
   coverImage: string; // Path to image in /public/images/
@@ -8,11 +9,14 @@ export interface Book {
   description?: string;
   link?: string; // Optional purchase/info link
   notes?: string; // Reading notes displayed on book back
+  rating?: number; // 1–5; PLACEHOLDER until real reviews are written
 }
 
 export const books: Book[] = [
   {
     id: "1",
+    slug: "between-the-world-and-me",
+    rating: 4.5,
     title: "Between the World and Me",
     author: "Ta-Nehisi Coates",
     coverImage: "/books/between-the-world-and-me.jpeg",
@@ -24,6 +28,8 @@ export const books: Book[] = [
   },
   {
     id: "2",
+    slug: "east-of-eden",
+    rating: 5,
     title: "East of Eden",
     author: "John Steinbeck",
     coverImage: "/books/east-of-eden.jpeg",
@@ -35,6 +41,8 @@ export const books: Book[] = [
   },
   {
     id: "3",
+    slug: "hard-boiled-wonderland-and-the-end-of-the-world",
+    rating: 4,
     title: "Hard-Boiled Wonderland and the End of the World",
     author: "Haruki Murakami",
     coverImage: "/books/hard-boiled-wonderland-and-the-end-of-the-world.jpeg",
@@ -46,6 +54,8 @@ export const books: Book[] = [
   },
   {
     id: "4",
+    slug: "kafka-on-the-shore",
+    rating: 4.5,
     title: "Kafka on the Shore",
     author: "Haruki Murakami",
     coverImage: "/books/kafka-on-the-shore.jpeg",
@@ -57,6 +67,8 @@ export const books: Book[] = [
   },
   {
     id: "5",
+    slug: "stories-of-your-life-and-others",
+    rating: 5,
     title: "Stories of Your Life and Others",
     author: "Ted Chiang",
     coverImage: "/books/stories-of-your-life-and-others.jpeg",
@@ -68,6 +80,8 @@ export const books: Book[] = [
   },
   {
     id: "6",
+    slug: "the-brothers-karamazov",
+    rating: 5,
     title: "The Brothers Karamazov",
     author: "Fyodor Dostoevsky",
     coverImage: "/books/the-brothers-karamazov.jpeg",
@@ -79,6 +93,8 @@ export const books: Book[] = [
   },
   {
     id: "7",
+    slug: "the-gene",
+    rating: 4,
     title: "The Gene: An Intimate History",
     author: "Siddhartha Mukherjee",
     coverImage: "/books/the-gene.jpeg",
@@ -90,6 +106,8 @@ export const books: Book[] = [
   },
   {
     id: "8",
+    slug: "the-seven-husbands-of-evelyn-hugo",
+    rating: 4,
     title: "The Seven Husbands of Evelyn Hugo",
     author: "Taylor Jenkins Reid",
     coverImage: "/books/the-seven-husbands-of-evelyn-hugo.jpeg",
@@ -101,6 +119,8 @@ export const books: Book[] = [
   },
   {
     id: "9",
+    slug: "the-way-of-kings",
+    rating: 4.5,
     title: "The Way of Kings",
     author: "Brandon Sanderson",
     coverImage: "/books/the-way-of-kings.jpeg",
@@ -112,6 +132,8 @@ export const books: Book[] = [
   },
   {
     id: "10",
+    slug: "when-breath-becomes-air",
+    rating: 5,
     title: "When Breath Becomes Air",
     author: "Paul Kalanithi",
     coverImage: "/books/when-breath-becomes-air.jpeg",
@@ -122,3 +144,8 @@ export const books: Book[] = [
     notes: "A devastating and beautiful meditation on mortality, meaning, and identity. Kalanithi's voice remains warm and intellectually rigorous even facing death. His struggle between the scientist's world and the embodied experience of illness is profoundly moving. Reading this changes how you think about life.",
   },
 ];
+
+// Look up a book by its URL slug. Used by the dynamic /books/[slug] routes.
+export function getBookBySlug(slug: string): Book | undefined {
+  return books.find((book) => book.slug === slug);
+}
