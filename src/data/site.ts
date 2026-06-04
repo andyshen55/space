@@ -12,6 +12,7 @@ export const siteConfig = {
     { label: "Home", href: "/" },
     { label: "Teaching", href: "/teaching" },
     { label: "Books", href: "/books" },
+    { label: "Puzzles", href: "/puzzles" },
   ],
   social: {
     twitter: "https://twitter.com/yourusername",
