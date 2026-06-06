@@ -6,26 +6,7 @@ export interface TeachingResource {
   links?: { label: string; url: string }[];
 }
 
-export const teachingResources: TeachingResource[] = [
-  {
-    id: "1",
-    title: "Introduction to Topic",
-    description: "A comprehensive introduction covering the fundamentals.",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Replace with your video ID
-    links: [
-      { label: "Slides", url: "https://example.com/slides1" },
-      { label: "Resources", url: "https://example.com/resources1" },
-    ],
-  },
-  {
-    id: "2",
-    title: "Advanced Concepts",
-    description: "Deep dive into advanced topics and techniques.",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Replace with your video ID
-    links: [
-      { label: "Slides", url: "https://example.com/slides2" },
-      { label: "Code Examples", url: "https://github.com/yourusername/examples" },
-    ],
-  },
-  // Add more teaching resources as needed
-];
+// Standalone talks & one-off videos that aren't part of a full course. The
+// /teaching page renders this as a secondary "Talks & one-offs" section only
+// when it's non-empty, so the courses grid stands alone until real talks land.
+export const teachingResources: TeachingResource[] = [];

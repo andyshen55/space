@@ -1,12 +1,13 @@
 export const siteConfig = {
-  name: "Your Name",
-  title: "Your Name - Portfolio",
-  description: "Personal portfolio showcasing my work, teaching resources, and publications.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://yoursite.com",
+  name: "Andy Shen",
+  title: "Andy Shen",
+  description:
+    "Math-circle courses, favorite puzzles, and reading notes — by Andy Shen.",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://yoursite.com", // TODO: set real domain via NEXT_PUBLIC_SITE_URL
   author: {
-    name: "Your Name",
-    bio: "A short bio about yourself. Replace this with your actual bio text.",
-    image: "/images/profile.jpg", // Update with your profile image path
+    name: "Andy Shen",
+    bio: "I teach math to curious kids at the UCLA Olga Radko Endowed Math Circle (ORMC) — building courses that climb from a concrete game or puzzle up to the real mathematics underneath. This site collects those courses, a few puzzles I keep coming back to, and notes on what I'm reading.",
+    image: "/images/profile.jpg", // TODO: update with a real profile image path
   },
   nav: [
     { label: "Home", href: "/" },

@@ -19,6 +19,18 @@ const demoRegistry = {
       <div className="mx-auto aspect-square w-full max-w-[420px] animate-pulse rounded-xl bg-muted" />
     ),
   }),
+  "set-board": dynamic(() => import("./demos/set/SetBoardDemo"), {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto h-[420px] w-full max-w-md animate-pulse rounded-xl bg-muted" />
+    ),
+  }),
+  "cryptarithm-solver": dynamic(() => import("./demos/CryptarithmSolverDemo"), {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto h-[360px] w-full max-w-md animate-pulse rounded-xl bg-muted" />
+    ),
+  }),
 } as const;
 
 export type PuzzleDemoKey = keyof typeof demoRegistry;
