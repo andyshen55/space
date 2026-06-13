@@ -24,6 +24,7 @@ npm run lint         # Run ESLint
 - **Theme Management**: next-themes (system/light/dark toggle)
 - **Animation**: motion (Framer Motion v12) — shared-layout/`layoutId` transitions, the 3D book, and the SVG puzzle demos
 - **Carousel**: keen-slider (mouse-wheel support via a custom plugin) — powers the book shelf
+- **3D**: three.js + `@react-three/fiber` v8 + `@react-three/drei` v9 (the React-18-compatible line) — only the `graphs-on-surfaces` course demo; loaded via an `ssr:false` dynamic import so the heavy bundle stays off every other page
 - **Image Optimization**: Next.js Image component with AVIF/WebP formats
 
 ## Architecture Overview
@@ -44,7 +45,8 @@ Content is stored in `src/data/`:
 - **`site.ts`**: Centralized config (site name, URL, nav links, social URLs, author bio, SEO defaults). Nav order: Home / Teaching / Books / Puzzles.
 - **`books.ts`**: `Book[]` with `id`, `slug`, `title`, `author`, `coverImage` (+ intrinsic `coverWidth`/`coverHeight` for `next/image`), `description`, `notes`, `rating`. `getBookBySlug()` powers the `/books/[slug]` routes.
 - **`puzzles.ts`**: `Puzzle[]` with `id`, `slug`, `title`, `tagline`, optional `category`/`difficulty`, `prompt`/`solution` as `string[]` paragraphs, an `illustration` key, an optional `demo` key, and optional `source`. `getPuzzleBySlug()` powers the `/puzzles/[slug]` routes. The `illustration`/`demo` fields are typed to registry keys (see Puzzles below), so an unknown key fails to compile.
-- **`teaching.ts`**: Array of teaching resource objects with video URLs
+- **`courses.ts`**: `Course[]` with `id`, `slug`, `title`, `tagline`, `level`, optional `category`, `summary` paragraphs, optional `lessons`/`videos`/`resources`/`credit`, an `illustration` key, and an optional `demo` key. `getCourseBySlug()` powers the `/teaching/[slug]` routes. The `illustration` and `demo` fields reuse the **same** puzzle registries (`IllustrationKey`, `PuzzleDemoKey`), so courses and puzzles share demos/art and an unknown key fails to compile. See "Teaching & Courses".
+- **`teaching.ts`**: `TeachingResource[]` for standalone "Talks & one-offs" videos (kept but currently empty; the `/teaching` page renders that section only when non-empty). Full courses live in `courses.ts`, not here.
 
 These files are imported into page components and rendered via map functions. Updates to site metadata, navigation, or content should go here first.
 
@@ -52,7 +54,7 @@ These files are imported into page components and rendered via map functions. Up
 
 - **Root layout** (`src/app/layout.tsx`): Sets up ThemeProvider, applies root metadata, renders Header/Footer/main
 - **Home** (`src/app/page.tsx`): Uses Hero and Bio components
-- **Teaching** (`src/app/teaching/page.tsx`): Imports teaching data, renders VideoEmbed components
+- **Teaching** (`src/app/teaching/`): `page.tsx` renders the course-card grid (+ an optional "Talks & one-offs" video section); `[slug]/page.tsx` is the per-course page (hero + summary + optional demo + videos + lessons + resources + credit) with `generateStaticParams`, per-course `generateMetadata`, and schema.org `Course` JSON-LD. See "Teaching & Courses".
 - **Books** (`src/app/books/`): `layout.tsx` mounts the persistent `BooksView` (shelf + URL-driven modal); `page.tsx` is the bare shelf; `[slug]/page.tsx` adds per-book metadata + JSON-LD + crawlable text. See "Book Shelf System".
 - **Puzzles** (`src/app/puzzles/`): `page.tsx` renders the illustrated tile grid; `[slug]/page.tsx` is the per-puzzle page (prompt + revealable solution + optional demo). See "Puzzles & Interactive Demos".
 
@@ -66,9 +68,12 @@ These files are imported into page components and rendered via map functions. Up
 
 **Puzzle Components** (`src/components/puzzles/`):
 - **`PuzzleGrid`**: responsive, full-bleed grid of illustrated tiles
-- **`PuzzleIllustration`** + `illustrations/`: inline-SVG tile-art registry (theme-aware via `currentColor`)
+- **`PuzzleIllustration`** + `illustrations/`: inline-SVG tile/hero-art registry (theme-aware via `currentColor`), shared by puzzle tiles **and** course cards
 - **`SolutionReveal`**: native `<details>` spoiler — works without JS and stays crawlable
-- **`PuzzleDemo`** + `DemoFrame` + `demos/`: the pluggable interactive-demo system
+- **`PuzzleDemo`** + `DemoFrame` + `demos/`: the pluggable interactive-demo system, shared by `/puzzles` and `/teaching` (demos: `coin-table`, `set-board`, `cryptarithm-solver`, `graphs-on-surfaces`)
+
+**Teaching Components** (`src/components/teaching/`):
+- **`CourseGrid`**: responsive, full-bleed grid of course cards (hero illustration + level/category chips), mirroring `PuzzleGrid`
 
 **Other UI Components** (`src/components/ui/`):
 - **`VideoEmbed`**: Wraps iframe for video embeds with aspect ratio preservation
@@ -140,7 +145,10 @@ entry (+ 1 SVG, + optionally 1 demo file + 1 registry line):
   maps a `PuzzleDemoKey` → `dynamic(() => import("./demos/X"), { ssr: false })`,
   wrapped in `DemoFrame`. It lives in a **client** module because `ssr: false`
   dynamic imports aren't allowed inside server components; the server detail page
-  just renders `<PuzzleDemo demoKey=... />`.
+  just renders `<PuzzleDemo demoKey=... />`. This **single registry is shared** by
+  both puzzles and courses (`courses.ts` types its `demo` field as `PuzzleDemoKey`
+  too), so a demo can be embedded on `/puzzles/[slug]` or `/teaching/[slug]` with
+  no duplication.
 
 **Demos are author-written React client components — not arbitrary/runtime
 code.** Each demo is a self-contained `"use client"` default export with no
@@ -164,6 +172,61 @@ boundary circle is covered *and* every pairwise exclusion-circle intersection is
 covered — to detect when no legal move remains and declare the AI the winner. The
 coin radius `r` is tuned so the endgame is reachable in ~a dozen moves.
 
+**3D demos are the same pattern, just heavier.** A demo may pull in three.js / R3F
+(see `graphs-on-surfaces` below). Because every demo is `ssr:false` + dynamically
+imported, that 3D bundle is code-split and downloads only when its page mounts —
+no other route pays for it. Same registry, same `<PuzzleDemo>` API.
+
+### Teaching & Courses
+
+The `/teaching` feature is a **courses showcase** built on the same
+data → SSG-`[slug]` → registry pattern as Books and Puzzles:
+
+- **`/teaching`** (`page.tsx`) renders `<CourseGrid>` over `courses` (full-bleed
+  card grid), plus an optional "Talks & one-offs" `VideoEmbed` section that
+  appears only when `teachingResources` is non-empty.
+- **`/teaching/[slug]`** (`[slug]/page.tsx`) is a server component mirroring
+  `puzzles/[slug]`: `generateStaticParams` from `courses`, per-course
+  `generateMetadata`, schema.org **`Course`** JSON-LD (`provider` = ORMC,
+  `lessons` → `hasPart`), then a crawlable body — hero (illustration + level/
+  category chips) → `summary` paragraphs → embedded `<PuzzleDemo>` (if `demo` set)
+  → `videos` via `VideoEmbed` → numbered `lessons` (each with optional `pdfUrl`)
+  → `resources` → `credit` line.
+- **Shared registries:** courses reuse the puzzle `IllustrationKey` (hero motifs
+  `set-cards`, `cryptarithm`, `surfaces`) and `PuzzleDemoKey` (no separate course
+  registry). Adding a course = 1 entry in `courses.ts` (+ optionally 1 illustration
+  + 1 demo, registered as for puzzles); the route, metadata, and sitemap entry
+  follow automatically.
+
+**The three courses:** ① **Abstract Algebra for SET** (`set-board` demo) —
+a SET card is a vector in (ℤ₃)⁴; three cards form a set ⟺ their vectors sum to 0.
+② **Cryptarithms** (`cryptarithm-solver` demo). ③ **Graph Theory on Surfaces**
+(`graphs-on-surfaces` 3D demo).
+
+**Example — SET demo (`demos/set/`):** `math.ts` holds the ported PySet core
+(`isSet`/`thirdCard`/`dealBoard`; attribute order color/shape/shading/count);
+`SetCard.tsx` renders any of the 81 cards as theme-aware SVG (3 colors × 3 shapes
+× 3 shadings × 1–3 count, striped fill via a `useId`-keyed `<pattern>`);
+`SetBoardDemo.tsx` is the two-tab demo (find-a-SET board + the third-card finder,
+the course punchline).
+
+**Example — graphs demo (`demos/graphs/`):** the only **three.js / R3F** demo.
+`geometry.ts` is pure TS (no three import): it defines K₅ = C₅(1,2) and
+K₃,₃ = C₆(1,3), lays them out on three surfaces — **plane**, **sphere** (the same
+2D layout via inverse stereographic projection, which *provably preserves
+crossings* — that's the "plane = sphere" lesson), and **torus** (circulant
+embeddings where the "skip"/"diameter" edges wind once through the hole, Δv = +1,
+making them mutually parallel in the universal cover → crossing-free) — and counts
+crossings **exactly** (2D segment intersection for plane/sphere; periodic
+segment intersection across integer translates for the torus). `GraphsOnSurfacesDemo.tsx`
+(`"use client"`) renders it with `<Canvas>` + `<OrbitControls>` + drei `<Line>`
+edges (hole-winding edges highlighted amber), a graph/surface toggle, and a live
+crossings + χ = V − E + F readout. The torus is tilted to a 3/4 view (its hole-axis
+is z; straight-down, wrapping edges project onto each other and *look* like
+crossings). Result: plane/sphere show crossings (K₅ = 5 pentagram, K₃,₃ = 3),
+torus shows **0** for both. There's a node math-check approach (replicate the
+detectors against the same data) to confirm counts without WebGL.
+
 ### Styling Conventions
 
 - **Color system**: Defined in `tailwind.config.ts` as CSS variables (background, foreground, border, accent, muted, etc.)
@@ -174,7 +237,8 @@ coin radius `r` is tuned so the endgame is reachable in ~a dozen moves.
 
 - Profile image: `public/images/profile.jpg`
 - Book covers: `public/books/` (referenced as `/books/*.jpeg` in `src/data/books.ts`, with intrinsic `coverWidth`/`coverHeight`)
-- Puzzle tile art: **no image assets** — illustrations are inline SVG components in `src/components/puzzles/illustrations/`
+- Puzzle tile art **and course hero art**: **no image assets** — illustrations are inline SVG components in `src/components/puzzles/illustrations/` (shared registry)
+- Course handout PDFs: would live under `public/teaching/<course>/...` and be referenced via a lesson's `pdfUrl` (none hosted yet — `pdfUrl` is currently unset on all lessons)
 - Other assets: `public/` root
 - Next.js Image component is used throughout for automatic optimization (AVIF/WebP)
 
@@ -191,9 +255,10 @@ coin radius `r` is tuned so the endgame is reachable in ~a dozen moves.
 
 ## Development Workflow
 
-1. **Update content**: Modify `src/data/site.ts`, `src/data/books.ts`, `src/data/puzzles.ts`, or `src/data/teaching.ts`
+1. **Update content**: Modify `src/data/site.ts`, `src/data/books.ts`, `src/data/puzzles.ts`, `src/data/courses.ts`, or `src/data/teaching.ts`
 2. **Add a puzzle**: add an entry to `puzzles.ts` + an SVG in `illustrations/` (and register it); for an interactive one, add a demo in `demos/` and one line to the `demoRegistry` (see "Puzzles & Interactive Demos")
-3. **Add sections**: Create a new page in `src/app/` or a new component in `src/components/`
-4. **Style**: Use TailwindCSS classes; update colors in `tailwind.config.ts` if needed
-5. **Test dark mode**: Theme toggle persists across page reloads via next-themes
-6. **Lint before commit**: `npm run lint` catches TypeScript and ESLint issues
+3. **Add a course**: add an entry to `courses.ts` (+ optionally a hero SVG in `illustrations/` and a demo in `demos/` + `demoRegistry` line — both registries are shared with puzzles); the `/teaching/[slug]` route, metadata, and sitemap entry follow automatically (see "Teaching & Courses")
+4. **Add sections**: Create a new page in `src/app/` or a new component in `src/components/`
+5. **Style**: Use TailwindCSS classes; update colors in `tailwind.config.ts` if needed
+6. **Test dark mode**: Theme toggle persists across page reloads via next-themes
+7. **Lint before commit**: `npm run lint` catches TypeScript and ESLint issues

@@ -31,6 +31,14 @@ const demoRegistry = {
       <div className="mx-auto h-[360px] w-full max-w-md animate-pulse rounded-xl bg-muted" />
     ),
   }),
+  // The 3D widget pulls in three.js + R3F; ssr:false + dynamic import keeps that
+  // heavy bundle off every other page — it loads only when this demo mounts.
+  "graphs-on-surfaces": dynamic(() => import("./demos/graphs/GraphsOnSurfacesDemo"), {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto h-[440px] w-full animate-pulse rounded-xl bg-muted" />
+    ),
+  }),
 } as const;
 
 export type PuzzleDemoKey = keyof typeof demoRegistry;

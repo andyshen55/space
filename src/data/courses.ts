@@ -91,6 +91,7 @@ export const courses: Course[] = [
     level: "Advanced",
     category: "Graph Theory",
     illustration: "surfaces",
+    demo: "graphs-on-surfaces",
     credit:
       "Based on the ORMC Spring 2023 graphs handouts (primary source Oleg Gleizer, 2021, revised by Andy Shen & Naji Sarsam). Prose rewritten for this page.",
     summary: [
