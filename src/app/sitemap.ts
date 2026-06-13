@@ -6,7 +6,7 @@ import { courses } from "@/data/courses";
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date().toISOString();
 
-  const routes = ["", "/teaching", "/books"].map((route) => ({
+  const routes = ["", "/teaching", "/books", "/puzzles", "/art"].map((route) => ({
     url: `${siteConfig.url}${route}`,
     lastModified,
     changeFrequency: "monthly" as const,

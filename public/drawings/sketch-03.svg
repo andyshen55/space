@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Landscape: mountains, sun, lake (wide aspect to test object-contain) -->
+  <circle cx="400" cy="100" r="40"/>
+  <path d="M30 250 L150 90 L230 200 L300 120 L420 250 Z"/>
+  <path d="M150 90 L120 140 L165 135 L150 175"/>
+  <path d="M300 120 L280 158 L312 154 L300 184"/>
+  <path d="M20 250 L500 250"/>
+  <path d="M60 290 C120 280 180 300 240 290 C300 280 360 300 460 290"/>
+  <path d="M90 320 C160 312 220 328 300 320"/>
+  <path d="M460 80 C476 84 488 96 492 112"/>
+  <path d="M310 80 C326 84 338 96 342 112"/>
+</svg>

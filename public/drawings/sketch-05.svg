@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Abstract doodle: spiral, lines, scattered marks -->
+  <path d="M200 250 C200 222 178 200 150 200 C108 200 78 234 78 280 C78 340 124 386 188 386
+           C268 386 326 326 326 248 C326 156 252 88 162 88"/>
+  <path d="M60 120 C100 90 150 100 170 140"/>
+  <path d="M340 360 C320 400 280 420 240 412"/>
+  <circle cx="300" cy="140" r="22"/>
+  <path d="M96 420 L140 444"/>
+  <path d="M120 430 L116 458"/>
+  <path d="M300 90 L330 70"/>
+  <path d="M315 80 L344 92"/>
+  <path d="M200 250 L214 236"/>
+</svg>

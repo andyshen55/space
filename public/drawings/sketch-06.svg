@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Still life: a mug and a stacked book -->
+  <path d="M120 250 L132 360 C134 376 150 388 178 388 L210 388 C238 388 254 376 256 360 L268 250 Z"/>
+  <path d="M120 250 C120 234 168 226 194 226 C220 226 268 234 268 250 C268 266 220 274 194 274 C168 274 120 266 120 250 Z"/>
+  <path d="M268 270 C300 268 318 286 316 312 C314 338 292 352 262 350"/>
+  <path d="M110 420 L300 420"/>
+  <path d="M150 420 L160 392"/>
+  <path d="M250 420 L240 392"/>
+  <path d="M110 460 L290 460 L300 432 L120 432 Z"/>
+  <path d="M120 432 L110 460"/>
+  <path d="M132 446 L286 446"/>
+</svg>

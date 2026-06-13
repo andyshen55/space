@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Portrait: a face in three-quarter view -->
+  <path d="M150 110 C120 130 110 180 115 230 C120 290 150 350 200 365 C250 350 280 300 288 240 C295 185 285 135 255 112 C220 90 180 90 150 110 Z"/>
+  <path d="M150 175 C160 168 175 168 184 176"/>
+  <path d="M222 174 C232 166 248 166 258 174"/>
+  <circle cx="167" cy="186" r="4" fill="#2a2a2a" stroke="none"/>
+  <circle cx="240" cy="184" r="4" fill="#2a2a2a" stroke="none"/>
+  <path d="M203 188 C200 210 196 226 188 236 C196 244 210 244 218 238"/>
+  <path d="M178 280 C195 296 225 296 244 280"/>
+  <path d="M150 110 C140 80 160 52 200 50 C242 50 264 78 256 112"/>
+  <path d="M120 200 C104 206 100 226 116 236"/>
+  <path d="M288 196 C306 202 310 224 292 234"/>
+  <path d="M196 365 C194 405 192 440 196 470"/>
+  <path d="M150 430 C180 450 230 450 260 430"/>
+</svg>

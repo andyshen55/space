@@ -36,7 +36,6 @@ export const metadata: Metadata = {
     title: siteConfig.title,
     description: siteConfig.description,
     images: [`${siteConfig.url}/og-image.png`],
-    creator: "@yourusername", // Update with your Twitter handle
   },
   robots: {
     index: true,

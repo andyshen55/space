@@ -14,10 +14,13 @@ export const siteConfig = {
     { label: "Teaching", href: "/teaching" },
     { label: "Books", href: "/books" },
     { label: "Puzzles", href: "/puzzles" },
+    { label: "Art", href: "/art" },
   ],
+  // Fill in real profile URLs to show these in the footer; any left blank are
+  // hidden automatically.
   social: {
-    twitter: "https://twitter.com/yourusername",
-    github: "https://github.com/yourusername",
-    linkedin: "https://linkedin.com/in/yourusername",
+    twitter: "",
+    github: "",
+    linkedin: "",
   },
 };

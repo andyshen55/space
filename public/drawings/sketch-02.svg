@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" fill="none" stroke="#2a2a2a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Potted plant on a sill -->
+  <path d="M140 360 L120 470 L280 470 L260 360 Z"/>
+  <path d="M120 388 L280 388"/>
+  <path d="M200 360 C200 300 196 250 188 210"/>
+  <path d="M196 250 C150 230 120 180 130 130 C176 140 200 190 200 250"/>
+  <path d="M200 250 C250 232 286 190 280 134 C232 142 202 188 200 250"/>
+  <path d="M200 300 C168 286 142 252 146 214 C182 224 202 262 200 300"/>
+  <path d="M200 300 C238 286 264 252 258 214 C224 226 202 262 200 300"/>
+  <path d="M188 210 C176 190 178 168 192 150"/>
+  <path d="M100 470 L300 470"/>
+</svg>
