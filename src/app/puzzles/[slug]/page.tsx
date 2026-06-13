@@ -101,6 +101,12 @@ export default function PuzzlePage({ params }: PuzzlePageProps) {
         ))}
       </div>
 
+      {puzzle.promptDemo && (
+        <div className="mt-8">
+          <PuzzleDemo demoKey={puzzle.promptDemo} />
+        </div>
+      )}
+
       <SolutionReveal>
         <div className="space-y-4 leading-relaxed text-muted-foreground">
           {puzzle.solution.map((para, i) => (

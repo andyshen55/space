@@ -4,6 +4,8 @@ import { BurningRopesArt } from "./BurningRopesArt";
 import { SetCardsArt } from "./SetCardsArt";
 import { CryptarithmArt } from "./CryptarithmArt";
 import { SurfacesArt } from "./SurfacesArt";
+import { KnightsTourArt } from "./KnightsTourArt";
+import { GoatArt } from "./GoatArt";
 
 // Registry of inline-SVG tile/hero illustrations, shared by the puzzle tiles and
 // the course cards. Adding a new illustration is one import + one line here; the
@@ -16,6 +18,8 @@ export const illustrations = {
   "set-cards": SetCardsArt,
   cryptarithm: CryptarithmArt,
   surfaces: SurfacesArt,
+  "knights-tour": KnightsTourArt,
+  goat: GoatArt,
 } as const;
 
 export type IllustrationKey = keyof typeof illustrations;

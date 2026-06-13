@@ -39,6 +39,24 @@ const demoRegistry = {
       <div className="mx-auto h-[440px] w-full animate-pulse rounded-xl bg-muted" />
     ),
   }),
+  "knights-tour": dynamic(() => import("./demos/KnightsTourDemo"), {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto aspect-square w-full max-w-[320px] animate-pulse rounded-xl bg-muted" />
+    ),
+  }),
+  "goat-tether": dynamic(() => import("./demos/GoatTetherDemo"), {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto aspect-[18/13] w-full max-w-[420px] animate-pulse rounded-xl bg-muted" />
+    ),
+  }),
+  "goat-rectangle": dynamic(() => import("./demos/GoatRectangleDemo"), {
+    ssr: false,
+    loading: () => (
+      <div className="mx-auto aspect-[16/11] w-full max-w-[440px] animate-pulse rounded-xl bg-muted" />
+    ),
+  }),
 } as const;
 
 export type PuzzleDemoKey = keyof typeof demoRegistry;
