@@ -40,6 +40,6 @@ next-env.d.ts
 # playwright
 .playwright-mcp
 
-# temp
-teaching/
-plans/
+# temp (repo-root archive dirs only — leading slash so they don't also match src/**/teaching, src/**/plans)
+/teaching/
+/plans/
