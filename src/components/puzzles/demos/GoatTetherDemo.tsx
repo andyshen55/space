@@ -101,9 +101,14 @@ export default function GoatTetherDemo() {
     [toLocal]
   );
 
+  // `start` is curried: start(target) is called in render to build the
+  // onPointerDown handler, but the ref writes run inside the returned handler at
+  // event time, not during render — the react-hooks/refs rule can't see that.
   const start = (target: DragTarget) => (e: React.PointerEvent) => {
+    /* eslint-disable react-hooks/refs */
     drag.current = target;
     svgRef.current?.setPointerCapture(e.pointerId);
+    /* eslint-enable react-hooks/refs */
   };
   const end = (e: React.PointerEvent) => {
     drag.current = null;

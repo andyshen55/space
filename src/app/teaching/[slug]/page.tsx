@@ -8,7 +8,7 @@ import { PuzzleDemo } from "@/components/puzzles/PuzzleDemo";
 import { VideoEmbed } from "@/components/ui/VideoEmbed";
 
 interface CoursePageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Statically generate a page for every course at build time (SSG, crawlable).
@@ -16,8 +16,9 @@ export function generateStaticParams() {
   return courses.map((course) => ({ slug: course.slug }));
 }
 
-export function generateMetadata({ params }: CoursePageProps): Metadata {
-  const course = getCourseBySlug(params.slug);
+export async function generateMetadata({ params }: CoursePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const course = getCourseBySlug(slug);
   if (!course) return {};
 
   const url = `${siteConfig.url}/teaching/${course.slug}`;
@@ -39,8 +40,9 @@ export function generateMetadata({ params }: CoursePageProps): Metadata {
   };
 }
 
-export default function CoursePage({ params }: CoursePageProps) {
-  const course = getCourseBySlug(params.slug);
+export default async function CoursePage({ params }: CoursePageProps) {
+  const { slug } = await params;
+  const course = getCourseBySlug(slug);
   if (!course) notFound();
 
   // schema.org Course markup. The summary becomes the description; the provider

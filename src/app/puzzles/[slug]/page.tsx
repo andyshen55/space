@@ -8,7 +8,7 @@ import { SolutionReveal } from "@/components/puzzles/SolutionReveal";
 import { PuzzleDemo } from "@/components/puzzles/PuzzleDemo";
 
 interface PuzzlePageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Statically generate a page for every puzzle at build time (SSG, crawlable).
@@ -16,8 +16,9 @@ export function generateStaticParams() {
   return puzzles.map((puzzle) => ({ slug: puzzle.slug }));
 }
 
-export function generateMetadata({ params }: PuzzlePageProps): Metadata {
-  const puzzle = getPuzzleBySlug(params.slug);
+export async function generateMetadata({ params }: PuzzlePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const puzzle = getPuzzleBySlug(slug);
   if (!puzzle) return {};
 
   const url = `${siteConfig.url}/puzzles/${puzzle.slug}`;
@@ -39,8 +40,9 @@ export function generateMetadata({ params }: PuzzlePageProps): Metadata {
   };
 }
 
-export default function PuzzlePage({ params }: PuzzlePageProps) {
-  const puzzle = getPuzzleBySlug(params.slug);
+export default async function PuzzlePage({ params }: PuzzlePageProps) {
+  const { slug } = await params;
+  const puzzle = getPuzzleBySlug(slug);
   if (!puzzle) notFound();
 
   // schema.org Question markup, with the solution modeled as the accepted

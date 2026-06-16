@@ -4,7 +4,7 @@ import { books, getBookBySlug } from "@/data/books";
 import { siteConfig } from "@/data/site";
 
 interface BookPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Statically generate a page for every book at build time (SSG, crawlable).
@@ -12,8 +12,9 @@ export function generateStaticParams() {
   return books.map((book) => ({ slug: book.slug }));
 }
 
-export function generateMetadata({ params }: BookPageProps): Metadata {
-  const book = getBookBySlug(params.slug);
+export async function generateMetadata({ params }: BookPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const book = getBookBySlug(slug);
   if (!book) return {};
 
   const url = `${siteConfig.url}/books/${book.slug}`;
@@ -50,8 +51,9 @@ export function generateMetadata({ params }: BookPageProps): Metadata {
 // driven by the URL. This page supplies the per-book metadata above, triggers a
 // 404 for unknown slugs, and renders a semantic, crawler-friendly summary of the
 // book so the page has clean indexable text even without JS.
-export default function BookPage({ params }: BookPageProps) {
-  const book = getBookBySlug(params.slug);
+export default async function BookPage({ params }: BookPageProps) {
+  const { slug } = await params;
+  const book = getBookBySlug(slug);
   if (!book) notFound();
 
   // schema.org Book markup, with the reading notes modeled as a Review by the

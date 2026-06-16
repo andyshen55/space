@@ -46,6 +46,11 @@ export function BooksView({ books }: { books: Book[] }) {
   // click (direct load, browser back/forward). Never clears here — the close
   // animation needs the id to persist until the modal has finished exiting.
   useEffect(() => {
+    // Intentional sync-on-change: when the active book changes from outside a
+    // click (direct load, back/forward) we must update the flying id, but never
+    // clear it here — the close animation needs it to persist until the modal
+    // has finished exiting, so this can't be derived during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (activeBook && flyingId !== activeBook.id) setFlyingId(activeBook.id);
   }, [activeBook, flyingId]);
 

@@ -1,15 +1,19 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 export function DarkModeToggle() {
-  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Track client-side mount via useSyncExternalStore so the SSR snapshot is
+  // `false` (placeholder) and the client snapshot is `true`, matching the
+  // next-themes hydration guard without a setState-in-effect.
+  const mounted = useSyncExternalStore(
+    () => () => {}, // No-op subscribe — this value never changes after mount
+    () => true, // Client snapshot
+    () => false // Server snapshot
+  );
 
   if (!mounted) {
     return (
